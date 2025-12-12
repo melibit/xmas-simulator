@@ -1,0 +1,62 @@
+import matplotlib.pyplot as plt
+import socket
+import csv
+
+FN = "led_xyz.csv"
+data = list(csv.reader(open(FN), delimiter=","))
+
+xs = list()
+ys = list()
+zs = list()
+
+for _x, _y, _z in data[1:]:
+    x = float(_x)
+    y = float(_y)
+    z = float(_z)
+    xs.append(x)
+    ys.append(z)
+    zs.append(y)
+
+fig = plt.figure()
+ax = fig.add_subplot(projection='3d')
+ax.set_aspect('equal')
+
+ax.set_title(FN)
+fig.canvas.manager.set_window_title(FN)
+ax.set_xlabel(data[0][0])
+ax.set_ylabel(data[0][2])
+ax.set_zlabel(data[0][1])
+plt.ion()
+plt.show()
+scatter = None
+
+HOST = "localhost"
+PORT = 8412
+
+
+leds = list()
+buf = ""
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.connect((HOST, PORT))
+
+    while True:
+        data = s.recv(1024)
+        for c in data:
+            if chr(c) == "-":
+                if len(leds) >= len(xs):
+                    if scatter is not None:
+                        scatter.remove()
+                    scatter = ax.scatter(xs, ys, zs, marker='o',
+                                         c=[[(((x // 256) // 256) % 256)/256, ((x // 256) % 256)/256, (x % 256)/256] for x in leds[:len(xs)-len(leds)]])
+                    plt.pause(.01)
+                leds = list()
+                continue
+
+            if chr(c) == '\r' or chr(c) == '\n':
+                if len(buf) > 0:
+                    leds.append(int(buf))
+                buf = ""
+                continue
+
+            buf += chr(c)
