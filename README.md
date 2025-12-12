@@ -1,5 +1,5 @@
 # WARNING
-THIS CODE IS **VERY BAD** IT WAS WRITTEN LATE AT NIGHT, IN A RUSH!
+THIS CODE IS **VERY BAD** (like pre-pre-pre alpha prototype) IT WAS WRITTEN LATE AT NIGHT, IN A RUSH!
 
 # xmas-simulator 
 INSTALL QEMU (https://www.qemu.org/download/).
