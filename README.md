@@ -8,9 +8,7 @@ MAKE SURE THESE ARE IN YOUR %PATH%
 I recommend using the Windows Subsystem for Linux (WSL) if you must use this under Windows.
 
 ```
-python3 emu_server.py
-```
-```
 python3 emu_client.py
+python3 emu_server.py
 ```
 
