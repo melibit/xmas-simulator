@@ -1,6 +1,31 @@
 import matplotlib.pyplot as plt
 import socket
 import csv
+import time
+
+
+HOST = "localhost"
+PORT = 5678
+while True:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            print(f"Attempting to connect to {HOST}:{PORT}")
+            s.connect((HOST, PORT))
+        except ConnectionRefusedError:
+            time.sleep(1)
+            continue
+        print("Connection Successsful")
+        with open("xmas.ino", "rb") as f:
+            s.sendfile(f)
+        print("Uploaded File")
+        s.sendall(bytes("EOF", "utf-8"))
+        data = s.recv(1024)
+        RUNPORT = int(str(data, "utf-8"))
+        break
+
+leds = list()
+buf = ""
+
 
 FN = "led_xyz.csv"
 data = list(csv.reader(open(FN), delimiter=","))
@@ -30,33 +55,34 @@ plt.ion()
 plt.show()
 scatter = None
 
-HOST = "localhost"
-PORT = 8412
+while True:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            print(f"Attempting to connect to {HOST}:{RUNPORT}\n")
+            s.connect((HOST, RUNPORT))
+        except ConnectionRefusedError:
+            time.sleep(1)
+            continue
 
+        print("Connection Successful")
 
-leds = list()
-buf = ""
+        while True:
+            data = s.recv(1024)
+            for c in data:
+                if chr(c) == "-":
+                    if len(leds) >= len(xs):
+                        if scatter is not None:
+                            scatter.remove()
+                        scatter = ax.scatter(xs, ys, zs, marker='o',
+                                             c=[[(((x // 256) // 256) % 256)/256, ((x // 256) % 256)/256, (x % 256)/256] for x in leds[:len(xs)-len(leds)]])
+                        plt.pause(.01)
+                    leds = list()
+                    continue
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.connect((HOST, PORT))
+                if chr(c) == '\r' or chr(c) == '\n':
+                    if len(buf) > 0:
+                        leds.append(int(buf))
+                    buf = ""
+                    continue
 
-    while True:
-        data = s.recv(1024)
-        for c in data:
-            if chr(c) == "-":
-                if len(leds) >= len(xs):
-                    if scatter is not None:
-                        scatter.remove()
-                    scatter = ax.scatter(xs, ys, zs, marker='o',
-                                         c=[[(((x // 256) // 256) % 256)/256, ((x // 256) % 256)/256, (x % 256)/256] for x in leds[:len(xs)-len(leds)]])
-                    plt.pause(.01)
-                leds = list()
-                continue
-
-            if chr(c) == '\r' or chr(c) == '\n':
-                if len(buf) > 0:
-                    leds.append(int(buf))
-                buf = ""
-                continue
-
-            buf += chr(c)
+                buf += chr(c)

@@ -6,9 +6,9 @@ INSTALL QEMU (https://www.qemu.org/download/).
 I recommend using the Windows Subsystem for Linux (WSL) under Windows.
 
 ```
-python3 main.py xmas.ino 
+python3 emu_server.py
 ```
 ```
-python3 main.py xmas.ino.tre
+python3 emu_client.py
 ```
 
