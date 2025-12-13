@@ -87,37 +87,41 @@ thread.start()
 HOST = ''                 # Symbolic name meaning all available interfaces
 PORT = 5678               # Arbitrary non-privileged port
 while True:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((HOST, PORT))
-        s.listen(1)
-        conn, addr = s.accept()
-        with conn:
-            print('Connected by', addr)
-            print(processes)
-            data = ""
-            while True:
-                rdata = conn.recv(1024)
-                data += rdata.decode("utf-8")
-                if data.endswith("EOF"):
-                    data = data.removesuffix("EOF")
-                    src = [e+'\n' for e in data.split('\n') if e]
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((HOST, PORT))
+            s.listen(1)
+            conn, addr = s.accept()
+            with conn:
+                print('Connected by', addr)
+                print(processes)
+                data = ""
+                while True:
+                    rdata = conn.recv(1024)
+                    data += rdata.decode("utf-8")
+                    if data.endswith("EOF"):
+                        data = data.removesuffix("EOF")
+                        src = [e+'\n' for e in data.split('\n') if e]
 
-                    elf = compile(src)
-                    RUNPORT = random.randint(6000, 7000)
-                    conn.sendall(bytes(str(RUNPORT), "utf-8"))
-                    print("SENT:", bytes(str(RUNPORT), "utf-8"))
-                    qemu = run(elf, RUNPORT)
-                    processes[RUNPORT] = qemu
+                        elf = compile(src)
+                        RUNPORT = random.randint(6000, 7000)
+                        conn.sendall(bytes(str(RUNPORT), "utf-8"))
+                        print("SENT:", bytes(str(RUNPORT), "utf-8"))
+                        qemu = run(elf, RUNPORT)
+                        processes[RUNPORT] = qemu
 
-                if data.endswith("CLOSEPORT"):
-                    data = data.removesuffix("CLOSEPORT")
-                    RUNPORT = int(data)
-                    if RUNPORT in processes:
-                        kill_process(*processes[RUNPORT])
+                    if data.endswith("CLOSEPORT"):
+                        data = data.removesuffix("CLOSEPORT")
+                        RUNPORT = int(data)
+                        if RUNPORT in processes:
+                            kill_process(*processes[RUNPORT])
 
-                if not rdata:
-                    break
+                    if not rdata:
+                        break
+    except Exception as e:
+        print("Caught", e)
+        continue
 
 """
 with open("xmas.ino", "r") as f:
