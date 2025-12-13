@@ -2,9 +2,10 @@ import matplotlib.pyplot as plt
 import socket
 import csv
 import time
+global RUNPORT, cid
 
+HOST = input("Enter emu server Hostname: ")
 
-HOST = "localhost"
 PORT = 5678
 while True:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -42,9 +43,28 @@ for _x, _y, _z in data[1:]:
     ys.append(z)
     zs.append(y)
 
+
 fig = plt.figure()
+
+
+def on_close(event):
+    global RUNPORT, cid
+    fig.canvas.mpl_disconnect(cid)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            print(f"Attempting to connect to {HOST}:{PORT}")
+            s.connect((HOST, PORT))
+        except ConnectionRefusedError:
+            exit()
+        print("Connection Successsful")
+        s.sendall(bytes(f"{RUNPORT}CLOSEPORT", "utf-8"))
+    exit()
+
+
 ax = fig.add_subplot(projection='3d')
 ax.set_aspect('equal')
+
+cid = fig.canvas.mpl_connect('close_event', on_close)
 
 ax.set_title(FN)
 fig.canvas.manager.set_window_title(FN)
@@ -75,7 +95,7 @@ while True:
                             scatter.remove()
                         scatter = ax.scatter(xs, ys, zs, marker='o',
                                              c=[[(((x // 256) // 256) % 256)/256, ((x // 256) % 256)/256, (x % 256)/256] for x in leds[:len(xs)-len(leds)]])
-                        plt.pause(.01)
+                        plt.pause(.1)
                     leds = list()
                     continue
 

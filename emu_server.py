@@ -1,9 +1,10 @@
 import socket
-import time
 import subprocess
 import pathlib
 import random
 import shutil
+import time
+import threading
 
 
 def preprocess(src):
@@ -56,40 +57,65 @@ def run(elf, port=8412):
         f.write(elf)
     process = subprocess.Popen(["qemu-system-avr", "-M", "uno", "-nographic", "-bios", f"./emu-server-build/{
         rand}-run.elf", "-serial", f"tcp::{port},server=on", "-D", f"./emu-server-build/{rand}-run.log", "-d", "in_asm"])
-    return (process, port, rand)
+    return (process, port, rand, time.time())
 
 
-def exit(process, port, rand):
+processes = dict()
+
+
+def kill_process(process, port, rand, t):
+    print(f"killing {process} on {port} (id: {rand})")
     process.kill()
     pathlib.Path(f"./emu-server-build/{rand}-run.elf").unlink()
+    if port in processes:
+        del processes[port]
 
+
+def time_thread():
+    while True:
+        time.sleep(1)
+        print(processes)
+        for process in list(processes.values()):
+            if time.time() - process[-1] > 15*60:  # 15 minutes
+                kill_process(*process)
+
+
+thread = threading.Thread(target=time_thread)
+thread.start()
 
 HOST = ''                 # Symbolic name meaning all available interfaces
 PORT = 5678               # Arbitrary non-privileged port
 while True:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
-        s.listen(5)
+        s.listen(1)
         conn, addr = s.accept()
         with conn:
             print('Connected by', addr)
+            print(processes)
             data = ""
             while True:
                 rdata = conn.recv(1024)
-                if not rdata:
-                    break
                 data += rdata.decode("utf-8")
                 if data.endswith("EOF"):
                     data = data.removesuffix("EOF")
-                    break
-            src = [e+'\n' for e in data.split('\n') if e]
+                    src = [e+'\n' for e in data.split('\n') if e]
 
-            elf = compile(src)
-            RUNPORT = random.randint(6000, 7000)
-            conn.sendall(bytes(str(RUNPORT), "utf-8"))
-            print("SENT:", bytes(str(RUNPORT), "utf-8"))
-            qemu = run(elf, RUNPORT)
-            print(qemu)
+                    elf = compile(src)
+                    RUNPORT = random.randint(6000, 7000)
+                    conn.sendall(bytes(str(RUNPORT), "utf-8"))
+                    print("SENT:", bytes(str(RUNPORT), "utf-8"))
+                    qemu = run(elf, RUNPORT)
+                    processes[RUNPORT] = qemu
+
+                if data.endswith("CLOSEPORT"):
+                    data = data.removesuffix("CLOSEPORT")
+                    RUNPORT = int(data)
+                    if RUNPORT in processes:
+                        kill_process(*processes[RUNPORT])
+
+                if not rdata:
+                    break
 
 """
 with open("xmas.ino", "r") as f:
