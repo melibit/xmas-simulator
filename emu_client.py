@@ -5,7 +5,7 @@ import time
 global RUNPORT, cid
 
 HOST = input("Enter emu server Hostname: ")
-
+FILENAME = input("Enter name of sketch to upload (e.g. xmas.ino): ")
 PORT = 5678
 while True:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -16,12 +16,14 @@ while True:
             time.sleep(1)
             continue
         print("Connection Successsful")
-        with open("xmas.ino", "rb") as f:
+        with open(FILENAME, "rb") as f:
             s.sendfile(f)
         print("Uploaded File")
         s.sendall(bytes("EOF", "utf-8"))
+        print("Compiling... (this make take around a minute)")
         data = s.recv(1024)
         RUNPORT = int(str(data, "utf-8"))
+        print("Compilation Complete")
         break
 
 leds = list()
