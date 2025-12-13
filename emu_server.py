@@ -74,7 +74,8 @@ def kill_process(process, port, rand, t):
 def time_thread():
     while True:
         time.sleep(1)
-        print(processes)
+        if len(processes) > 0:
+            print(processes)
         for process in list(processes.values()):
             if time.time() - process[-1] > 15*60:  # 15 minutes
                 kill_process(*process)
